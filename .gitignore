@@ -1,5 +1,6 @@
 # Directorios de compilación de ESP-IDF
 *build/
+*.cache/
 
 # Configuraciones generadas localmente
 *sdkconfig
