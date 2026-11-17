@@ -1,0 +1,13 @@
+# Directorios de compilación de ESP-IDF
+*build/
+
+# Configuraciones generadas localmente
+*sdkconfig
+*sdkconfig.old
+
+# Archivos de entorno de Python / IDEs
+*.vscode/
+*.idea/
+*.swp
+*.pyc
+*__pycache__/
