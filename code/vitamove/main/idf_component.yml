@@ -1,0 +1,3 @@
+dependencies:
+  # Si necesitas LVGL para la interfaz (Task 5)
+  lvgl/lvgl: "~8.3.0"
