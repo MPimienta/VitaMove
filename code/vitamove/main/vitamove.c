@@ -1,16 +1,69 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+#include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_timer.h"
 #include "driver/gpio.h"
 
-// NUEVAS APIs de ESP-IDF v5+ / v6
+// Buses and peripherals
 #include "driver/i2c_master.h"
 #include "driver/spi_master.h"
 #include "driver/i2s_pdm.h"
 
+// WiFi and telemetry
+#include "nvs_flash.h"
+#include "esp_event.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "mqtt_client.h"
+#include "cJSON.h"
+#include "esp_spiffs.h"
+
+// ---- Task 1: OTA y rollback ----
+#include "esp_http_client.h"
+#include "esp_https_ota.h"
+#include "esp_ota_ops.h"            // esp_ota_mark_app_valid_cancel_rollback()
+#include "esp_crt_bundle.h"         // certificados raíz para HTTPS
+
+// ---- Task 5: pantalla, táctil y LVGL ----
+#include "esp_lcd_panel_io.h"
+#include "esp_lcd_panel_ops.h"
+#include "esp_lcd_panel_vendor.h"   // ST7789 (comprobar en v6, ver nota)
+#include "esp_lcd_touch.h"
+#include "esp_lcd_touch_ft5x06.h"   // espressif/esp_lcd_touch_ft5x06
+#include "lvgl.h"
+#include "esp_lvgl_port.h"          // espressif/esp_lvgl_port
+
+// ---- Task 7: BLE (elige UNA pila) ----
+// NimBLE (más ligera, recomendada):
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
+
+// ---- Task 6 y 8: hora y energía ----
+#include <time.h>
+#include <sys/time.h>
+#include "esp_sleep.h"              // deep sleep / light sleep
+#include "esp_pm.h"
+
+#define THINGSBOARD_URI "mqtt://eu.thingsboard.cloud"
+#define ACCESS_TOKEN    "PLACEHOLDER"
+#define WIFI_SSID       "SBC"
+#define WIFI_PASS       "SBCwifi&"
+
+#define CURRENT_FW_VERSION  "1.0.0"
+#define VERSION_URL         "PLACEHOLDER"
+#define FIRMWARE_URL        "PLACEHOLDER"
+
+
 static const char *TAG = "VitaMove_Main";
+EventGroupHandle_t network_event_group;
 
 // ============================================================================
 // DEFINICIÓN DE PINES (LILYGO T-Watch 2020 V3)
@@ -142,15 +195,25 @@ void init_gpios(void) {
     gpio_set_level(MOTOR_PIN, 0); // Apagar motor
 }
 
-// Prototipos de tareas
-void task_ota(void *pvParameters);
-void task_accelerometer(void *pvParameters);
-void task_microphone(void *pvParameters);
-void task_telemetry(void *pvParameters);
-void task_display(void *pvParameters);
-void task_rtc(void *pvParameters);
-void task_ble(void *pvParameters);
-void task_power_management(void *pvParameters);
+
+void task_ota(void *pvParameters) 
+{
+    while(1) 
+    {
+        vTaskDelay(pdMS_TO_TICKS(10000)); 
+    } 
+}
+
+
+
+
+void task_accelerometer(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
+void task_microphone(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(100)); } }
+void task_telemetry(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(5000)); } }
+void task_display(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(500)); } }
+void task_rtc(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
+void task_ble(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
+void task_power_management(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(5000)); } }
 
 // ============================================================================
 // FUNCIÓN PRINCIPAL
@@ -187,6 +250,24 @@ void app_main(void)
         ESP_LOGE(TAG, "Fallo al inicializar el micrófono.");
     }
 
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+       ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+
+    ESP_ERROR_CHECK(ret);
+
+    network_event_group = xEventGroupCreate();
+
+    // Config mqtt client with credentials
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = THINGSBOARD_URI,
+        .broker.address.port = 1883,
+        .credentials.username = ACCESS_TOKEN
+    };
+
     xTaskCreate(task_power_management, "Power_Task", 4096, NULL, 6, NULL);
     xTaskCreate(task_display, "Display_Task", 4096, NULL, 5, NULL);
     xTaskCreate(task_accelerometer, "Accel_Task", 4096, NULL, 5, NULL);
@@ -197,12 +278,3 @@ void app_main(void)
     xTaskCreate(task_ota, "OTA_Task", 4096, NULL, 3, NULL);
 }
 
-// --- Stubs de tareas ---
-void task_ota(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(10000)); } }
-void task_accelerometer(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
-void task_microphone(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(100)); } }
-void task_telemetry(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(5000)); } }
-void task_display(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(500)); } }
-void task_rtc(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
-void task_ble(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(1000)); } }
-void task_power_management(void *pvParameters) { while(1) { vTaskDelay(pdMS_TO_TICKS(5000)); } }

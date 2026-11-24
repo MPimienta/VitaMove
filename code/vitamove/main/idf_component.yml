@@ -1,3 +1,6 @@
 dependencies:
-  # Si necesitas LVGL para la interfaz (Task 5)
+  espressif/mqtt: "*"
+  espressif/cjson: "^1.7.19"
   lvgl/lvgl: "~8.3.0"
+  espressif/esp_lvgl_port: "*"
+  espressif/esp_lcd_touch_ft5x06: "*"
