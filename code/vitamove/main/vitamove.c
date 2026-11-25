@@ -39,7 +39,7 @@
 // ThingsBoard (MQTT)
 #define THINGSBOARD_URI         "mqtt://eu.thingsboard.cloud"
 #define THINGSBOARD_PORT        1883
-#define ACCESS_TOKEN            "PLACEHOLDER"
+#define ACCESS_TOKEN            "rYqpdzYL5OiOXWl3NZoO"
 #define TELEMETRY_TOPIC         "v1/devices/me/telemetry"
 #define TELEMETRY_PERIOD_MS     30000
 
@@ -52,8 +52,9 @@
 
 // OTA
 #define CURRENT_FW_VERSION      "1.0.0"
-#define VERSION_URL             "PLACEHOLDER"
-#define FIRMWARE_URL            "PLACEHOLDER"
+#define VERSION_URL             "https://raw.githubusercontent.com/MPimienta/VitaMove/master/version/version.txt"
+#define FIRMWARE_URL            "https://raw.githubusercontent.com/MPimienta/VitaMove/master/firmware/firmware.bin"
+
 #define OTA_CHECK_PERIOD_MS     (6U * 60U * 60U * 1000U)   // cada 6 horas
 
 static const char *TAG = "VitaMove_Main";
