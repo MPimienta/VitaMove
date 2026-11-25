@@ -52,7 +52,7 @@
 
 // OTA
 #define CURRENT_FW_VERSION      "1.0.0"
-#define VERSION_URL             "https://raw.githubusercontent.com/MPimienta/VitaMove/master/version/version.txt"
+#define VERSION_URL             "https://raw.githubusercontent.com/MPimienta/VitaMove/master/firmware/version.txt"
 #define FIRMWARE_URL            "https://raw.githubusercontent.com/MPimienta/VitaMove/master/firmware/firmware.bin"
 
 #define OTA_CHECK_PERIOD_MS     (6U * 60U * 60U * 1000U)   // cada 6 horas
@@ -434,11 +434,6 @@ static esp_err_t ota_fetch_remote_version(char *out, size_t len)
 
 static void ota_check_and_update(void)
 {
-    if (strcmp(VERSION_URL, "PLACEHOLDER") == 0 || strcmp(FIRMWARE_URL, "PLACEHOLDER") == 0) {
-        ESP_LOGW(TAG, "OTA: URLs sin configurar, se omite la comprobación.");
-        return;
-    }
-
     char remote[32];
     if (ota_fetch_remote_version(remote, sizeof(remote)) != ESP_OK) {
         ESP_LOGW(TAG, "OTA: no se pudo consultar la versión remota.");
